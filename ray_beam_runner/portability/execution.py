@@ -43,9 +43,13 @@ from apache_beam.runners.portability.fn_api_runner import worker_handlers
 from apache_beam.runners.worker import bundle_processor
 from apache_beam.runners.worker import sdk_worker
 
+# register protobuf serializers
+import ray_beam_runner.portability.protobuf_serializers
+
 _LOGGER = logging.getLogger(__name__)
 
 
+@ray.remote
 def ray_execute_bundle(
     runner_context: 'RayRunnerExecutionContext',
     bundle_context_manager: fn_execution.BundleContextManager,
@@ -54,9 +58,10 @@ def ray_execute_bundle(
     fired_timers: Mapping[translations.TimerFamilyId, fn_execution.PartitionableBuffer],
     expected_outputs: translations.DataOutput,
     expected_output_timers: Mapping[translations.TimerFamilyId, bytes],
-    instruction_request: beam_fn_api_pb2.InstructionRequest,
+    instruction_request, # type: beam_fn_api_pb2.InstructionRequest
     dry_run=False,
-) -> Tuple[beam_fn_api_pb2.InstructionResponse, Mapping[bytes, fn_execution.PartitionableBuffer]]:
+):
+  # type: (...) -> Tuple[beam_fn_api_pb2.InstructionResponse, Mapping[bytes, fn_execution.PartitionableBuffer]]
   output_buffers = {}
   process_bundle_id = instruction_request.instruction_id
 
@@ -271,7 +276,7 @@ class RayWorkerHandlerManager:
 class RayRunnerExecutionContext(object):
   def __init__(self,
       stages: List[translations.Stage],
-      pipeline_components: beam_runner_api_pb2.Components,
+      pipeline_components, #: beam_runner_api_pb2.Components,
       safe_coders: translations.SafeCoderMapping,
       data_channel_coders: Mapping[str, str],
   ) -> None:
@@ -333,7 +338,7 @@ class RayRunnerExecutionContext(object):
             'Unsupported merging strategy: %s' %
             windowing_strategy_proto.merge_status)
       self.pipeline_context.windowing_strategies.put_proto(safe_id, safe_proto)
-      return safe_id
+    return safe_id
 
   def commit_side_inputs_to_state(
       self,
