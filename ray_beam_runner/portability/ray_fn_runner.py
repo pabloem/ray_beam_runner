@@ -60,6 +60,8 @@ from ray_beam_runner.portability.context_management import RayBundleContextManag
 from ray_beam_runner.portability.execution import _RayMetricsActor
 from ray_beam_runner.portability.execution import ray_execute_bundle
 from ray_beam_runner.portability.execution import RayRunnerExecutionContext
+# register protobuf serializers
+import ray_beam_runner.portability.protobuf_serializers
 
 if TYPE_CHECKING:
   from apache_beam.pipeline import Pipeline
@@ -488,7 +490,7 @@ class RayFnApiRunner(runner.PipelineRunner):
   # TODO(pabloem): Are there two different IDs? the Bundle ID and PBD ID?
     process_bundle_id = 'bundle_%s' % bundle_context_manager.process_bundle_descriptor.id
 
-    result, output = ray_execute_bundle(
+    result, output = ray.get(ray_execute_bundle.remote(
         runner_execution_context,
         bundle_context_manager,
         runner_execution_context.state_servicer,
@@ -501,7 +503,7 @@ class RayFnApiRunner(runner.PipelineRunner):
             process_bundle=beam_fn_api_pb2.ProcessBundleRequest(
                 process_bundle_descriptor_id=bundle_context_manager.process_bundle_descriptor.id,
                 cache_tokens=[next(cache_token_generator)]))
-    )
+    ))
 
     # TODO(pabloem): Add support for splitting of results.
 
